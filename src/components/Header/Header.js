@@ -6,7 +6,7 @@ import { faUserPlus } from '@fortawesome/free-solid-svg-icons';
 
 const Header = () => {
   return (
-    <nav className="navbar navbar-expand-lg bg-primary">
+    <nav className="navbar navbar-expand-lg" style={{ backgroundColor: '#0033b5' }}>
       <div className="container-fluid">
         <Link className="navbar-brand text-white fw-bold" to="/">
           VSCODEHELP

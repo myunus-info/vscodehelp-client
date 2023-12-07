@@ -7,7 +7,7 @@ const AuthContext = createContext({
   isLoggedIn: false,
   login: token => {},
   logout: () => {},
-  userData: {},
+  user: {},
 });
 
 const retrieveStoredToken = () => {
@@ -29,7 +29,7 @@ const retrieveStoredToken = () => {
 
 export const AuthContextProvider = props => {
   const tokenData = retrieveStoredToken();
-  const [userData, setUserData] = useState({});
+  const [user, setUser] = useState({});
 
   let initialToken;
   if (tokenData) initialToken = tokenData.token;
@@ -46,7 +46,7 @@ export const AuthContextProvider = props => {
   }, []);
 
   const loginHandler = (user, token, expirationTime) => {
-    setUserData(user);
+    setUser(user);
     setToken(token);
     sessionStorage.setItem('token', token);
     sessionStorage.setItem('expirationTime', expirationTime);
@@ -63,7 +63,7 @@ export const AuthContextProvider = props => {
     isLoggedIn: isUserLoggedIn,
     login: loginHandler,
     logout: logoutHandler,
-    userData,
+    user,
   };
 
   return <AuthContext.Provider value={contextValue}>{props.children}</AuthContext.Provider>;

@@ -1,21 +1,51 @@
-import React, { useState } from 'react';
+import React, { useContext, useState } from 'react';
 import Layout from '../Layout/Layout';
+import useHttp from '../hook/useHttp';
+import AuthContext from '../context/auth-context';
+import { useNavigate } from 'react-router-dom';
 
 const VerifyEmail = () => {
   function transformEmail(email) {
-    const firstHalf = email.split('@')[0];
-    const secondHalf = email.split('@')[1];
+    const firstHalf = email?.split('@')[0];
+    const secondHalf = email?.split('@')[1];
     let transformedEmail = '';
-    transformedEmail += firstHalf.replace(firstHalf.slice(1), '***');
+    transformedEmail += firstHalf?.replace(firstHalf.slice(1), '***');
     transformedEmail += `@${secondHalf}`;
     return transformedEmail;
   }
-  const transformedEmail = transformEmail('myunus_edu@yahoo.com');
+  const { sendRequest, isLoading, error } = useHttp();
+  const authCtx = useContext(AuthContext);
+  const transformedEmail = transformEmail(authCtx?.user?.email);
+  const navigate = useNavigate();
 
   const [verificationCode, setVerificationCode] = useState('');
 
+  const verifyOTP = data => {
+    if (data.status === 'success') {
+      navigate('/user/user-data');
+    }
+    // console.log('Verify OTP data: ', data);
+  };
+
+  const verifyOTPHandler = async otp => {
+    sendRequest(
+      {
+        url: 'http://localhost:5000/api/users/verify-otp',
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${authCtx.token}`,
+        },
+        body: { OTP: otp },
+      },
+      verifyOTP
+    );
+  };
+
   const handleSubmit = e => {
     e.preventDefault();
+
+    verifyOTPHandler(verificationCode);
 
     console.log(verificationCode);
 
@@ -40,7 +70,10 @@ const VerifyEmail = () => {
             >
               <form onSubmit={handleSubmit} className="form-control w-50">
                 <div className=" w-100 p-2" style={{ borderRadius: '10px', boxShadow: '5 5 5 10 10' }}>
-                  <p>A six digit email address sent to your email address: {transformedEmail}</p>
+                  <p>
+                    A six digit email email verification code sent to your email address:{' '}
+                    {transformedEmail}
+                  </p>
                   <label htmlFor="input" className="pb-2">
                     Verification Code
                   </label>
@@ -51,6 +84,8 @@ const VerifyEmail = () => {
                     className="form-control w-100"
                     required
                   />
+
+                  {error && <p className="text-danger">{error}</p>}
                   <button
                     className="btn"
                     type="submit"
@@ -62,7 +97,7 @@ const VerifyEmail = () => {
                       marginTop: '2rem',
                     }}
                   >
-                    Submit
+                    {isLoading ? 'Submitting...' : 'Submit'}
                   </button>
                 </div>
               </form>

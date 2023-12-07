@@ -1,12 +1,16 @@
-import React, { useEffect, useState } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import Layout from '../Layout/Layout';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useForm, Controller } from 'react-hook-form';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faUser, faEnvelope } from '@fortawesome/free-regular-svg-icons';
 import { faLock, faKey, faGlobe } from '@fortawesome/free-solid-svg-icons';
 import { countries } from 'countries-list';
 import './styles.css';
+import useHttp from '../hook/useHttp';
+import toast from 'react-hot-toast';
+import AuthContext from '../context/auth-context';
+import { Toaster } from 'react-hot-toast';
 
 const Register = () => {
   const {
@@ -14,7 +18,7 @@ const Register = () => {
     reset,
     control,
     handleSubmit,
-    formState: { errors },
+    formState: { errors, isSubmitSuccessful, isDirty, isSubmitted },
   } = useForm();
 
   const [countryData, setCountryData] = useState([]);
@@ -22,6 +26,11 @@ const Register = () => {
   const [singleCountry, setSingleCountry] = useState('');
   const [countryError, setCountryError] = useState('');
   const [mobileNumberError, setMobileNumberError] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+  const [confirmPasswordError, setConfirmPasswordError] = useState('');
+  const navigate = useNavigate();
+  const { sendRequest, isLoading, error } = useHttp();
+  const authCtx = useContext(AuthContext);
 
   useEffect(() => {
     const allCountries = Object.keys(countries).map(countryCode => ({
@@ -41,6 +50,29 @@ const Register = () => {
     }
   };
 
+  const registerUser = data => {
+    if (data.status === 'success') {
+      const expirationTime = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+      authCtx.login(data.data.user, data.data.accessToken, expirationTime);
+      navigate('/user/authorization');
+    } else if (error && typeof error === 'string') {
+      toast.error(error);
+    }
+    // console.log('Register user data: ', data);
+  };
+
+  const registerUserHandler = async userData => {
+    sendRequest(
+      {
+        url: 'http://localhost:5000/api/users/register',
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: userData,
+      },
+      registerUser
+    );
+  };
+
   const onSubmit = data => {
     data['country'] = singleCountry;
     data['mobileNumber'] = `+${mobileCode} ${data.mobileNumber}`;
@@ -50,10 +82,20 @@ const Register = () => {
     if (!/^\+\d{1,4}\s?(\d{1,})$/.test(data.mobileNumber)) {
       return setMobileNumberError('Invalid mobile number!');
     }
+    if (!data.password) return setPasswordError('Password is required!');
+    if (!data.confirmPassword) return setConfirmPasswordError('Confirm password required!');
+
+    registerUserHandler(data);
 
     console.log(data);
-    reset();
   };
+
+  useEffect(() => {
+    if (isSubmitSuccessful && !errors && !isDirty && isSubmitted) {
+      toast.success('User registered successfully!');
+      reset();
+    }
+  }, [isSubmitSuccessful, reset, errors, isDirty, isSubmitted]);
 
   return (
     <Layout>
@@ -217,33 +259,33 @@ const Register = () => {
                       {...register('password', { required: true })}
                     />
                   </div>
-                  {errors.password && (
-                    <span style={{ color: 'crimson', display: 'block' }}>Password is required</span>
+                  {passwordError && (
+                    <span style={{ color: 'crimson', display: 'block' }}>{passwordError}</span>
                   )}
                 </div>
                 {/* Confirm Password */}
                 <div className="d-flex ms-2" style={{ flexDirection: 'column' }}>
-                  <p htmlFor="confirm_password" className="form-label fw-bold">
+                  <p htmlFor="confirmPassword" className="form-label fw-bold">
                     Confirm Password
                   </p>
                   <div className="input-group input-group-lg ">
-                    <span className="input-group-text" id="confirm_password">
+                    <span className="input-group-text" id="confirmPassword">
                       <FontAwesomeIcon icon={faKey} />
                     </span>
                     <input
                       className="form-control"
                       type="password"
                       placeholder="Confirm Password"
-                      {...register('confirm_password', { required: true })}
+                      {...register('confirmPassword', { required: true })}
                     />
                   </div>
-                  {errors.password && (
-                    <span style={{ color: 'crimson', display: 'block' }}>
-                      Confirm password is required
-                    </span>
+                  {confirmPasswordError && (
+                    <span style={{ color: 'crimson', display: 'block' }}>{confirmPasswordError}</span>
                   )}
                 </div>
               </div>
+
+              {error && <p style={{ color: 'crimson', fontWeight: '600' }}>{error}</p>}
 
               <button
                 className="btn"
@@ -255,12 +297,13 @@ const Register = () => {
                 }}
                 type="submit"
               >
-                Submit
+                {isLoading ? 'Submitting...' : 'Submit'}
               </button>
             </form>
           </div>
         </div>
       </div>
+      <Toaster />
     </Layout>
   );
 };

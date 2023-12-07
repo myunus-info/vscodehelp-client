@@ -14,8 +14,8 @@ function App() {
       <Route path="/user/register" element={<Register />} />
       <Route path="/user/login" element={<Login />} />
       <Route path="/user/*" element={<PrivateOutlet />}>
+        <Route path="authorization" element={<VerifyEmail />} />
         <Route path="user-data" element={<RegisterUserData />} />
-        <Route path="authorization" lement={<VerifyEmail />} />
         <Route path="dashboard" element={<Dashboard />} />
       </Route>
     </Routes>

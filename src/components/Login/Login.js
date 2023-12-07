@@ -1,23 +1,58 @@
-import React from 'react';
+import React, { useContext, useEffect } from 'react';
 import Layout from '../Layout/Layout';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faUser } from '@fortawesome/free-regular-svg-icons';
 import { faKey } from '@fortawesome/free-solid-svg-icons';
+import useHttp from '../hook/useHttp';
+import AuthContext from '../context/auth-context';
+import toast, { Toaster } from 'react-hot-toast';
 
 const Login = () => {
+  const { sendRequest, isLoading, error } = useHttp();
+  const authCtx = useContext(AuthContext);
+  const navigate = useNavigate();
+
   const {
     register,
     reset,
     handleSubmit,
-    formState: { errors },
+    formState: { errors, isSubmitSuccessful, isDirty, isSubmitted },
   } = useForm();
 
-  const onSubmit = data => {
-    console.log(data);
-    reset();
+  const loginUser = data => {
+    if (data.status === 'success') {
+      const expirationTime = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+      authCtx.login(data.data.user, data.data.accessToken, expirationTime);
+      navigate('/user/dashboard');
+    }
+    console.log('Login user data: ', data);
   };
+
+  const loginUserHandler = async data => {
+    sendRequest(
+      {
+        url: 'http://localhost:5000/api/users/login',
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: data,
+      },
+      loginUser
+    );
+  };
+
+  const onSubmit = data => {
+    loginUserHandler(data);
+    // console.log(data);
+  };
+
+  useEffect(() => {
+    if (isSubmitSuccessful && !errors && !isDirty && isSubmitted) {
+      toast.success('User Logged in successfully!');
+      reset();
+    }
+  }, [isSubmitSuccessful, reset, errors, isDirty, isSubmitted]);
 
   return (
     <Layout>
@@ -66,17 +101,17 @@ const Login = () => {
                   Username
                 </label>
                 <div className="input-group input-group-lg">
-                  <span className="input-group-text" id="username">
+                  <span className="input-group-text" id="identifier">
                     <FontAwesomeIcon icon={faUser} />
                   </span>
                   <input
                     className="form-control"
                     type="text"
-                    placeholder="Enter Username"
-                    {...register('username', { required: true })}
+                    placeholder="Enter username"
+                    {...register('identifier', { required: true })}
                   />
                 </div>
-                {errors.username && (
+                {errors.identifier && (
                   <span style={{ display: 'block', color: 'crimson' }}>Username is required</span>
                 )}
               </div>
@@ -102,6 +137,8 @@ const Login = () => {
                 )}
               </div>
 
+              {error && <p>{error}</p>}
+
               <button
                 className="btn"
                 type="submit"
@@ -112,12 +149,13 @@ const Login = () => {
                   marginBottom: '2rem',
                 }}
               >
-                Submit
+                {isLoading ? 'Submitting...' : 'Submit'}
               </button>
             </form>
           </div>
         </div>
       </div>
+      <Toaster />
     </Layout>
   );
 };

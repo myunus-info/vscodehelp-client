@@ -1,19 +1,54 @@
-import React from 'react';
+import React, { useContext, useEffect } from 'react';
 import Layout from '../Layout/Layout';
 import { useForm } from 'react-hook-form';
+import useHttp from '../hook/useHttp';
+import AuthContext from '../context/auth-context';
+import { useNavigate } from 'react-router-dom';
 
 const RegisterUserData = () => {
+  const { sendRequest, isLoading, error } = useHttp();
+  const authCtx = useContext(AuthContext);
+  const navigate = useNavigate();
+
   const {
     register,
     reset,
     handleSubmit,
-    formState: { errors },
+    formState: { errors, isSubmitSuccessful, isDirty, isSubmitted },
   } = useForm();
 
-  const onSubmit = data => {
-    console.log(data);
-    reset();
+  const registerUserDetails = data => {
+    if (data.status === 'success') {
+      navigate('/user/dashboard');
+    }
+    console.log('Register user details data: ', data);
   };
+
+  const registerUserDetailsHandler = async data => {
+    sendRequest(
+      {
+        url: 'http://localhost:5000/api/users/create-user-details',
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${authCtx.token}`,
+        },
+        body: data,
+      },
+      registerUserDetails
+    );
+  };
+
+  const onSubmit = data => {
+    registerUserDetailsHandler(data);
+    console.log(data);
+  };
+
+  useEffect(() => {
+    if (!errors && isSubmitSuccessful && !isDirty && isSubmitted) {
+      reset();
+    }
+  }, [errors, isSubmitSuccessful, isDirty, isSubmitted, reset]);
 
   return (
     <Layout>
@@ -125,6 +160,8 @@ const RegisterUserData = () => {
                 </div>
               </div>
 
+              {error && <p className="text-danger">{error}</p>}
+
               <button
                 className="btn"
                 type="submit"
@@ -135,7 +172,7 @@ const RegisterUserData = () => {
                   marginBottom: '2rem',
                 }}
               >
-                Submit
+                {isLoading ? 'Submitting' : 'Submit'}
               </button>
             </form>
           </div>

@@ -15,7 +15,11 @@ const useHttp = () => {
       });
 
       if (!response.ok) {
-        throw new Error('Request failed!');
+        if (response.status === 404) {
+          throw new Error(`The requested URL ${response.statusText}` || 'Request failed!');
+        }
+        console.log('Error Log: ', response);
+        throw new Error(response.statusText || 'Request failed!');
       }
 
       const data = await response.json();
